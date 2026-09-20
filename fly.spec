@@ -61,7 +61,9 @@ exe = EXE(
     bootloader_ignore_signals=False,
     strip=False,
     upx=False,
-    console=False,
+    # Windows: a console you can close to stop the bar. macOS keeps a
+    # windowed .app; quit from the Dock.
+    console=sys.platform != "darwin",
     disable_windowed_traceback=False,
     argv_emulation=sys.platform == "darwin",
     target_arch=None,

@@ -8,14 +8,14 @@ Works fully offline. The 3D, fonts, and CSS are bundled. The only thing it opens
 
 GitHub Actions builds:
 
-- **Windows x64** — unzip, double-click `DegenerateFly.exe`
-- **Apple Silicon macOS** — unzip, right-click `DegenerateFly.app` → Open (unsigned)
+- **Windows x64** — unzip, double-click `DegenerateFly.exe`. A console stays open; close it to stop the server.
+- **Apple Silicon macOS** — unzip, right-click `DegenerateFly.app` → Open (unsigned). Quit from the Dock.
 
 Download the zips from the latest [Actions run](https://github.com/damnbrush/DegenerateFly/actions) or from a [Release](https://github.com/damnbrush/DegenerateFly/releases) if a `v*` tag was pushed.
 
 Windows SmartScreen will complain (unsigned). *More info → Run anyway.* macOS Gatekeeper: right-click → Open the first time.
 
-First launch compiles the Numba brain. Give it a minute; the browser opens when the bar is ready. Close the app (or the console, if you launched from source) to stop.
+First launch compiles the Numba brain. Give it a minute; the browser opens when the bar is ready.
 
 ## From source (Windows)
 

@@ -66,7 +66,11 @@ def main() -> None:
 
     port = pick_port()
     url = f"http://127.0.0.1:{port}/"
-    logging.info("The bar is at %s — leave this running, close it to stop.", url)
+    logging.info("The bar is at %s", url)
+    print()
+    print(f"  The bar is at  {url}")
+    print("  Close this window to stop.")
+    print()
     threading.Thread(target=wait_then_open, args=(url,), daemon=True).start()
     uvicorn.run(app, host="127.0.0.1", port=port, log_level="info", use_colors=False)
 
