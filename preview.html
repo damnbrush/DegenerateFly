@@ -1,0 +1,62 @@
+<!doctype html>
+<!-- Development turntable for the fly accessories. Not part of the game. -->
+<html lang="en">
+  <head><meta charset="utf-8" /><title>accessory preview</title>
+  <style>html,body{margin:0;background:#20242b;overflow:hidden}canvas{display:block}</style></head>
+  <body>
+    <script type="importmap">
+      {
+        "imports": {
+          "three": "/vendor/three/three.module.js",
+          "three/addons/": "/vendor/three/jsm/"
+        }
+      }
+    </script>
+    <script type="module">
+      import * as THREE from "three";
+      import { makeBow, makeTruckerCap } from "/fly.js";
+
+      const renderer = new THREE.WebGLRenderer({ antialias: true });
+      renderer.setSize(900, 900);
+      renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.toneMappingExposure = 1.0;
+      document.body.appendChild(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      scene.background = new THREE.Color(0x20242b);
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x404858, 1.1));
+      const key = new THREE.DirectionalLight(0xffffff, 2.2);
+      key.position.set(1.2, 1.6, 1.4);
+      scene.add(key);
+      const fill = new THREE.DirectionalLight(0xbfd4ff, 0.7);
+      fill.position.set(-1.4, 0.4, 0.8);
+      scene.add(fill);
+
+      const camera = new THREE.PerspectiveCamera(19, 1, 0.01, 20);
+
+      const which = new URLSearchParams(location.search).get("a") || "cap";
+      const obj = which === "bow" ? makeBow() : makeTruckerCap();
+      const holder = new THREE.Group();
+      holder.add(obj);
+      scene.add(holder);
+
+      /* a stand-in head, so the fit reads the way it will on the fly */
+      const head = new THREE.Mesh(
+        new THREE.SphereGeometry(0.135, 24, 18),
+        new THREE.MeshStandardMaterial({ color: 0x2a2d33, roughness: 0.7 })
+      );
+      head.scale.set(1, 0.95, 0.8);
+      head.position.y = which === "bow" ? -0.125 : -0.188;
+      scene.add(head);
+
+      window.__view = (yawDeg, pitchDeg) => {
+        const y = (yawDeg * Math.PI) / 180, p = (pitchDeg * Math.PI) / 180, r = 1.5;
+        camera.position.set(Math.sin(y) * Math.cos(p) * r, Math.sin(p) * r, Math.cos(y) * Math.cos(p) * r);
+        camera.lookAt(0, 0, 0);
+        renderer.render(scene, camera);
+      };
+      window.__ready = true;
+      window.__view(0, 8);
+    </script>
+  </body>
+</html>

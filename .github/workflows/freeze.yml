@@ -1,0 +1,64 @@
+name: freeze
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    tags: ["v*"]
+
+jobs:
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+      - name: Freeze
+        run: python -m PyInstaller --noconfirm --clean fly.spec
+      - name: Zip
+        shell: pwsh
+        run: Compress-Archive -Path dist/DegenerateFly -DestinationPath DegenerateFly-windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DegenerateFly-windows-x64
+          path: DegenerateFly-windows-x64.zip
+
+  macos:
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Install
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install -r requirements.txt pyinstaller
+      - name: Freeze
+        run: python -m PyInstaller --noconfirm --clean fly.spec
+      - name: Zip
+        run: ditto -c -k --keepParent dist/DegenerateFly.app DegenerateFly-macos-arm64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: DegenerateFly-macos-arm64
+          path: DegenerateFly-macos-arm64.zip
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/')
+    needs: [windows, macos]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            DegenerateFly-windows-x64/DegenerateFly-windows-x64.zip
+            DegenerateFly-macos-arm64/DegenerateFly-macos-arm64.zip
+          generate_release_notes: true

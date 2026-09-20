@@ -1,0 +1,354 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Муха выбрала быть счастливой</title>
+  <script src="/vendor/tailwind.js"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          fontFamily: {
+            display: ['"Fraunces"', "Georgia", "serif"],
+            mono: ['"IBM Plex Mono"', "ui-monospace", "monospace"],
+          },
+          colors: {
+            bar: { 950: "#0a0809", 900: "#141012" },
+            neon: "#ff3b3b",
+            lab: "#7dffb3",
+            amber: "#e8a54b",
+            male: "#7ab8ff",
+          },
+        },
+      },
+    };
+  </script>
+  <link rel="stylesheet" href="/vendor/fonts.css" />
+  <style>
+    html, body { background: #0a0809; }
+    #stage { touch-action: none; }
+    .meter > span { display: block; height: 100%; border-radius: 999px; transition: width 220ms linear; }
+    .flicker { animation: flicker 3.6s infinite; }
+    @keyframes flicker { 0%,100%{opacity:1} 93%{opacity:.5} 94%{opacity:1} }
+    #log p { margin: 0 0 .55rem; }
+    #log p:first-child { color: #f5e6c8; font-size: 0.95rem; }
+    #beatBar { transform-origin: left center; }
+    .drive-glow { box-shadow: 0 0 10px currentColor; }
+    .actor-f { outline: 1px solid rgba(255, 59, 59, 0.55); }
+    .actor-m { outline: 1px solid rgba(122, 184, 255, 0.55); }
+    .speed-on { background: #e8a54b; color: #0a0809; }
+  </style>
+  <script type="importmap">
+    { "imports": {
+      "three": "/vendor/three/three.module.js",
+      "three/addons/": "/vendor/three/jsm/"
+    } }
+  </script>
+</head>
+<body class="bg-bar-950 text-stone-200 font-mono antialiased min-h-screen">
+  <div class="max-w-7xl mx-auto px-4 py-5">
+    <header class="flex flex-col lg:flex-row lg:items-end lg:justify-between gap-3 mb-4">
+      <div>
+        <p id="metaLine" class="text-[10px] tracking-[0.28em] uppercase text-amber/80">Грузим коннектом…</p>
+        <h1 class="font-display text-3xl sm:text-5xl text-stone-100 leading-none mt-1">
+          Муха выбрала быть <span class="text-neon flicker">счастливой</span>
+        </h1>
+        <p class="text-xs text-stone-400 mt-2 max-w-2xl">
+          Две мухи играют сами. Сладкое их радует — как джекпот, только без барабана.
+          Один ход за раз. Смотри, кто ходит и почему.
+        </p>
+      </div>
+      <div class="text-right">
+        <div id="headline" class="font-display text-2xl text-amber">Нос к носу</div>
+        <div class="text-[10px] uppercase tracking-widest text-stone-500 mt-1">кто богаче · в долг — один раз</div>
+      </div>
+    </header>
+
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <aside class="lg:col-span-3">
+        <div id="fPanel" class="bg-bar-900/80 border border-neon/30 rounded-2xl p-3 cursor-pointer">
+          <div class="flex justify-between items-baseline">
+            <h2 class="text-neon font-display text-xl">Самка</h2>
+            <div class="text-sm"><span id="fCredits" class="text-lab text-2xl font-display">50</span> <span class="text-stone-600">долг</span> <span id="fDebt" class="text-neon">0</span></div>
+          </div>
+          <p id="fPose" class="text-[11px] text-stone-400 mt-1"></p>
+          <p id="fWhy" class="text-[11px] text-amber/90 mt-1 min-h-[1.6rem]"></p>
+          <div id="fMeters" class="space-y-2 mt-2"></div>
+          <p class="text-[10px] text-stone-600 mt-2">Лучший куш: <span id="fBest">0</span></p>
+        </div>
+      </aside>
+
+      <section class="lg:col-span-6 relative">
+        <div class="rounded-2xl overflow-hidden border border-white/10 bg-bar-900 relative">
+          <canvas id="stage" class="block w-full h-[500px] lg:h-[640px]"></canvas>
+          <div class="pointer-events-none absolute inset-x-0 bottom-0 bg-gradient-to-t from-black/80 via-black/40 to-transparent px-4 pb-3 pt-16">
+            <div id="beatWho" class="text-[10px] uppercase tracking-[0.25em] text-amber/80">Стойка</div>
+            <div id="beatDo" class="font-display text-2xl sm:text-3xl text-stone-100 leading-tight">ещё ничего</div>
+            <div id="beatWhy" class="text-[13px] text-stone-300 mt-1">ждём первый ход</div>
+            <div id="beatIO" class="text-[11px] text-lab/90 mt-1 font-mono">вход · выход</div>
+            <div class="flex items-center gap-3 mt-1">
+              <div id="beatLine" class="text-[12px] text-stone-500 truncate flex-1"></div>
+              <div id="compass" class="text-[11px] text-stone-400 shrink-0">курс ·</div>
+            </div>
+            <div class="h-0.5 bg-white/10 mt-3 rounded-full overflow-hidden">
+              <div id="beatBar" class="h-full bg-amber w-full"></div>
+            </div>
+          </div>
+        </div>
+        <p id="busy" class="hidden absolute top-3 right-4 text-[10px] tracking-widest uppercase text-amber">шевелит мозгом…</p>
+      </section>
+
+      <aside class="lg:col-span-3">
+        <div id="mPanel" class="bg-bar-900/80 border border-male/30 rounded-2xl p-3 cursor-pointer">
+          <div class="flex justify-between items-baseline">
+            <h2 class="text-male font-display text-xl">Самец</h2>
+            <div class="text-sm"><span id="mCredits" class="text-lab text-2xl font-display">50</span> <span class="text-stone-600">долг</span> <span id="mDebt" class="text-male">0</span></div>
+          </div>
+          <p id="mPose" class="text-[11px] text-stone-400 mt-1"></p>
+          <p id="mWhy" class="text-[11px] text-amber/90 mt-1 min-h-[1.6rem]"></p>
+          <div id="mMeters" class="space-y-2 mt-2"></div>
+          <p class="text-[10px] text-stone-600 mt-2">Лучший куш: <span id="mBest">0</span></p>
+        </div>
+      </aside>
+    </div>
+
+    <div class="mt-4 grid grid-cols-1 lg:grid-cols-12 gap-4">
+      <div class="lg:col-span-7 bg-bar-900/80 border border-white/10 rounded-2xl p-4">
+        <div class="text-[10px] uppercase tracking-widest text-stone-500 mb-2">Что сказали</div>
+        <div id="log" class="text-[13px] leading-relaxed text-stone-300 max-h-52 overflow-y-auto"></div>
+      </div>
+      <div class="lg:col-span-5 bg-bar-900/80 border border-white/10 rounded-2xl p-4 flex flex-wrap gap-2 items-start">
+        <button id="btnAuto" class="px-4 py-3 rounded-xl bg-lab text-bar-950 font-semibold text-sm">Пауза</button>
+        <button id="btnReset" class="px-4 py-3 rounded-xl border border-white/10 text-stone-400 text-sm">Сначала</button>
+        <div class="flex gap-1 ml-auto">
+          <button data-speed="0.55" class="speedBtn px-2 py-1 rounded-lg border border-white/10 text-[10px] uppercase tracking-wider text-stone-400">медленнее</button>
+          <button data-speed="1" class="speedBtn speed-on px-2 py-1 rounded-lg border border-white/10 text-[10px] uppercase tracking-wider">так</button>
+          <button data-speed="1.65" class="speedBtn px-2 py-1 rounded-lg border border-white/10 text-[10px] uppercase tracking-wider text-stone-400">живее</button>
+        </div>
+        <div class="w-full text-[10px] text-stone-600">Один ход — одна муха. Пока играет, можно просто смотреть. Пауза — и угостить выбранную (клик по карточке):</div>
+        <button id="btnShot" class="px-3 py-2 rounded-lg bg-amber text-bar-950 text-sm hidden poke">Налить −10</button>
+        <button id="btnSpin" class="px-3 py-2 rounded-lg bg-neon text-white text-sm hidden poke">Крутануть −5</button>
+        <span id="reels" class="ml-auto font-display text-2xl text-amber">◆ ◆ ◆</span>
+      </div>
+    </div>
+    <footer class="mt-4 text-[10px] text-stone-600 max-w-3xl">
+      Шипы настоящие — FlyWire v783, уравнения Шиу, Numba, 500 мс мушиного времени на ход, обе мухи считаются
+      одновременно на двух ядрах. Вход — сахарные и горькие GRN на живых 80 Гц: выше подграф идёт в разнос, потому что
+      при обрезке до 26 тысяч клеток теряется тормозное окружение. Держит один общий тормоз усиления.
+      Глоток — MN9, настоящий мотонейрон. Курс — EPG; кольцу дан тонус, иначе в подграфе оно только тормозится.
+      Радость — медленный DA от собственного глотка, обида — от горечи и от того, насколько она глоток срезала.
+      PAM и PPL1 мы не читаем: их петли остались за границей подграфа, так что они лишь отражали бы наш же вход.
+    </footer>
+  </div>
+
+  <script type="module">
+    import { bootStage } from "/stage.js";
+
+    const METERS = [
+      { key: "mb_reward", hz: "da", label: "Радость", hint: "медленный DA от сахара, не скрипт в PAM", color: "#7dffb3", unit: "" },
+      { key: "mb_aversion", hz: "oa", label: "Обида", hint: "OA / горечь — проигрыш", color: "#ff7a5c", unit: "" },
+      { key: "sez_potential", hz: "mn9_hz", label: "Хоботок", hint: "MN9 — настоящий мотонейрон глотка", color: "#e8a54b", unit: "Гц" },
+      { key: "cx_instability", hz: "epg_heading", label: "Курс", hint: "EPG компас + DNa02. Падение ≈ 1", color: "#ff3b3b", unit: "" },
+      { key: "npf_stress", hz: "npf_hz", label: "Зуд", hint: "NPF — искать награду, занять", color: "#67e8f9", unit: "Гц" },
+    ];
+
+    function poseLine(p) {
+      const f = p?.sex === "female";
+      const map = {
+        idle: f ? "сидит. Делает вид, что считает." : "сидит. Делает вид, что считает.",
+        drink: "к рюмке. Хоботок уже в деле.",
+        spin: f ? "дёрнула ручку автомата" : "дёрнул ручку автомата",
+        win: f ? "празднует. Бантик едва держится." : "празднует. Кепка едва держится.",
+        lose: f ? "обиделась всем телом" : "обиделся всем телом",
+        steal: "бочком к чужим фишкам",
+        fall: "лежит. Горизонтально.",
+        climb: f ? "карабкается на табурет" : "карабкается на табурет",
+        nap: f ? "задремала у бокала" : "задремал у бокала",
+        beg: f ? "просит глазами. Фишек нет." : "просит глазами. Фишек нет.",
+        borrow: "берёт сотню. Больше не дадут.",
+      };
+      return map[p?.pose] || "";
+    }
+
+    function buildMeters(root) {
+      METERS.forEach((m) => {
+        const row = document.createElement("div");
+        row.innerHTML = `
+          <div class="flex justify-between text-[10px] gap-2">
+            <span class="text-stone-400">${m.label}</span>
+            <span class="text-stone-500"><span data-val="${m.key}" class="text-stone-200">0.00</span> · <span data-hz="${m.key}">0</span></span>
+          </div>
+          <div class="meter h-1.5 mt-1 bg-black/50 rounded-full overflow-hidden">
+            <span data-bar="${m.key}" style="width:0%;background:${m.color}"></span>
+          </div>
+          <div class="text-[10px] text-stone-600">${m.hint}</div>`;
+        root.appendChild(row);
+      });
+    }
+    buildMeters(document.getElementById("fMeters"));
+    buildMeters(document.getElementById("mMeters"));
+
+    let selected = "female";
+    let state = { female: { brain: {}, pose: "idle", sex: "female" }, male: { brain: {}, pose: "idle", sex: "male" }, autopilot: true };
+    let lastFxId = 0;
+
+    function paintSide(pre, panel, p, focused) {
+      const b = p.brain || {};
+      document.getElementById(pre + "Credits").textContent = p.credits ?? 0;
+      document.getElementById(pre + "Debt").textContent = p.debt ?? 0;
+      document.getElementById(pre + "Best").textContent = p.biggest_win ?? 0;
+      document.getElementById(pre + "Pose").textContent = poseLine(p);
+      document.getElementById(pre + "Why").textContent = p.why || "";
+      panel.classList.toggle("actor-f", focused && p.sex === "female");
+      panel.classList.toggle("actor-m", focused && p.sex === "male");
+      METERS.forEach((m) => {
+        const v = Number(b[m.key] ?? 0);
+        const raw = Number(b[m.hz] ?? 0);
+        const hzTxt = m.unit === "Гц" ? `${Math.round(raw)} Гц` : raw.toFixed(2);
+        panel.querySelector(`[data-val="${m.key}"]`).textContent = v.toFixed(2);
+        panel.querySelector(`[data-hz="${m.key}"]`).textContent = hzTxt;
+        const bar = panel.querySelector(`[data-bar="${m.key}"]`);
+        bar.style.width = `${Math.max(0, Math.min(1, v)) * 100}%`;
+        bar.classList.toggle("drive-glow", focused && p.drive === m.key);
+      });
+    }
+
+    let holdMs = 3200;
+    let speed = 1;
+
+    function restartBeatBar(ms) {
+      const bar = document.getElementById("beatBar");
+      bar.style.transition = "none";
+      bar.style.transform = "scaleX(1)";
+      void bar.offsetWidth;
+      bar.style.transition = `transform ${Math.max(200, ms)}ms linear`;
+      bar.style.transform = "scaleX(0)";
+    }
+
+    function paintBeat(beat) {
+      if (!beat) return;
+      holdMs = Number(beat.hold_ms || 3200);
+      const who = document.getElementById("beatWho");
+      who.textContent = beat.who || "Стойка";
+      who.style.color = beat.sex === "male" ? "#7ab8ff" : beat.sex === "female" ? "#ff3b3b" : "";
+      const verb = beat.who ? `${beat.who} — ${beat.do || ""}` : (beat.do || "");
+      document.getElementById("beatDo").textContent = verb;
+      document.getElementById("beatWhy").textContent = beat.why || "";
+      const io = document.getElementById("beatIO");
+      const inn = beat.io_in || "тишина";
+      const out = beat.io_out || "";
+      io.textContent = `вход: ${inn}  →  ${out}`;
+      document.getElementById("beatLine").textContent = beat.line ? `«${beat.line}»` : "";
+      const ms = (beat.wall_ms && beat.sim_ms)
+        ? `  ·  ${Math.round(beat.sim_ms)} мс модели / ${Math.round(beat.wall_ms)} мс стены`
+        : "";
+      io.textContent += ms;
+      const focus = state[beat.sex];
+      const heading = Number(focus?.brain?.epg_heading ?? 0);
+      const arrow = heading > 0.15 ? "→" : heading < -0.15 ? "←" : "·";
+      document.getElementById("compass").textContent = `курс ${arrow} ${heading.toFixed(2)}`;
+      restartBeatBar(holdMs / speed);
+    }
+
+    function paint(next) {
+      state = next;
+      if (next.meta) {
+        document.getElementById("metaLine").textContent =
+          `${next.meta.engine || "LIF"} · ${next.meta.n_female}♀ / ${next.meta.n_male}♂ · ${Number(next.meta.n_edges).toLocaleString("ru-RU")} синапсов · ${next.meta.hops || ""}`;
+      }
+      document.getElementById("headline").textContent = next.headline || "Нос к носу";
+      const focus = next.beat?.sex;
+      paintSide("f", document.getElementById("fPanel"), next.female, focus === "female");
+      paintSide("m", document.getElementById("mPanel"), next.male, focus === "male");
+      const log = document.getElementById("log");
+      log.innerHTML = (next.log || "").split("\n").filter(Boolean).map((l) => `<p>${l}</p>`).join("");
+      const auto = !!next.autopilot;
+      document.getElementById("btnAuto").textContent = auto ? "Пауза" : "Пусть играют";
+      document.getElementById("btnAuto").classList.toggle("bg-lab", auto);
+      document.getElementById("btnAuto").classList.toggle("text-bar-950", auto);
+      document.getElementById("btnAuto").classList.toggle("border", !auto);
+      document.querySelectorAll(".poke").forEach((el) => el.classList.toggle("hidden", auto));
+      if (next.spin && next.spin.won) document.getElementById("reels").textContent = next.spin.jackpot ? "✦ ✦ ✦" : "★ ★ ★";
+      else if (next.spin && next.spin.won === false) document.getElementById("reels").textContent = "▲ ◆ ●";
+      if (next.fx && next.fx.id && next.fx.id !== lastFxId) {
+        lastFxId = next.fx.id;
+        triggerFx(next.fx);
+      }
+      paintBeat(next.beat);
+      notePose("female", next.female);
+      notePose("male", next.male);
+      stage.setChips("female", next.female?.credits ?? 0);
+      stage.setChips("male", next.male?.credits ?? 0);
+    }
+
+    async function call(path, body) {
+      document.getElementById("busy").classList.remove("hidden");
+      try {
+        const res = await fetch(path, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(body || {}) });
+        paint(await res.json());
+      } finally {
+        document.getElementById("busy").classList.add("hidden");
+      }
+    }
+
+    document.getElementById("fPanel").onclick = () => { selected = "female"; };
+    document.getElementById("mPanel").onclick = () => { selected = "male"; };
+    document.getElementById("btnAuto").onclick = () => call("/api/auto", { on: !state.autopilot });
+    document.getElementById("btnReset").onclick = () => {
+      lastFxId = 0;
+      stage.resetRigs();
+      call("/api/reset");
+    };
+    document.getElementById("btnShot").onclick = () => call("/api/shot", { sex: selected });
+    document.getElementById("btnSpin").onclick = () => call("/api/spin", { sex: selected });
+    document.querySelectorAll(".speedBtn").forEach((btn) => {
+      btn.onclick = () => {
+        speed = Number(btn.dataset.speed || 1);
+        document.querySelectorAll(".speedBtn").forEach((b) => {
+          b.classList.toggle("speed-on", b === btn);
+          b.classList.toggle("text-stone-400", b !== btn);
+        });
+        restartBeatBar(holdMs / speed);
+      };
+    });
+
+    const stage = bootStage(document.getElementById("stage"), () => state, () => holdMs);
+    function triggerFx(fx) { stage.triggerFx(fx); }
+    function notePose(sex, p) { stage.notePose(sex, p); }
+
+    paint(await fetch("/api/state").then((r) => r.json()));
+    let ticking = false;
+
+    function sleep(ms) {
+      return new Promise((r) => setTimeout(r, ms));
+    }
+
+    async function beatLoop() {
+      await sleep(Math.max(800, holdMs / speed));
+      while (true) {
+        if (!state.autopilot) {
+          await sleep(400);
+          continue;
+        }
+        if (ticking) {
+          await sleep(200);
+          continue;
+        }
+        ticking = true;
+        document.getElementById("busy").classList.remove("hidden");
+        try {
+          paint(await fetch("/api/tick", { method: "POST" }).then((r) => r.json()));
+        } catch (_) {
+          /* keep the loop alive */
+        } finally {
+          ticking = false;
+          document.getElementById("busy").classList.add("hidden");
+        }
+        await sleep(Math.max(900, holdMs / speed));
+      }
+    }
+    beatLoop();
+  </script>
+</body>
+</html>

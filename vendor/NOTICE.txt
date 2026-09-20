@@ -1,0 +1,6 @@
+Vendored so the bar runs with no network.
+
+- three.js 0.160.1 — MIT, https://github.com/mrdoob/three.js
+- Tailwind CSS 3.4.16 (browser JIT) — MIT, https://github.com/tailwindlabs/tailwindcss
+- Fraunces — SIL Open Font License, Undercase Type
+- IBM Plex Mono — SIL Open Font License, IBM
