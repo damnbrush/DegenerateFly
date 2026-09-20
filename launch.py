@@ -13,6 +13,18 @@ from paths import cache_root, prepare_numba
 prepare_numba()
 
 
+def attach_stdio(logf) -> None:
+    """Frozen --noconsole builds leave stdout/stderr as None. Uvicorn's
+    colour formatter then dies on sys.stdout.isatty()."""
+    if sys.stdout is not None and sys.stderr is not None:
+        return
+    stream = open(logf, "a", encoding="utf-8", buffering=1)
+    if sys.stdout is None:
+        sys.stdout = stream
+    if sys.stderr is None:
+        sys.stderr = stream
+
+
 def pick_port(start: int = 8000) -> int:
     for p in range(start, start + 20):
         with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
@@ -39,6 +51,7 @@ def wait_then_open(url: str) -> None:
 
 def main() -> None:
     logf = cache_root() / "server.log"
+    attach_stdio(logf)
     logging.basicConfig(
         level=logging.INFO,
         format="%(asctime)s %(levelname)s %(message)s",
@@ -55,7 +68,7 @@ def main() -> None:
     url = f"http://127.0.0.1:{port}/"
     logging.info("The bar is at %s — leave this running, close it to stop.", url)
     threading.Thread(target=wait_then_open, args=(url,), daemon=True).start()
-    uvicorn.run(app, host="127.0.0.1", port=port, log_level="info")
+    uvicorn.run(app, host="127.0.0.1", port=port, log_level="info", use_colors=False)
 
 
 if __name__ == "__main__":
